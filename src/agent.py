@@ -3,11 +3,14 @@ import os
 
 from dotenv import load_dotenv
 from pydantic_ai import Agent
-from pydantic_ai.mcp import MCPServerStreamableHTTP
+from pydantic_ai.mcp import load_mcp_servers
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.azure import AzureProvider
+from pathlib import Path
 
-server = MCPServerStreamableHTTP('http://localhost:8000/mcp')
+script_dir = Path(__file__).parent
+mcp_path = script_dir / "mcp_config.json"
+servers = load_mcp_servers(config_path=mcp_path)
 load_dotenv()
 
 azure_model = OpenAIChatModel(
@@ -29,11 +32,11 @@ agent = Agent(
         "When the user asks about tasks, use the get_all_tasks tool to fetch them. "
         "Never respond without checking the actual task data using the tools."
     ),
-    toolsets=[server]
+    toolsets=servers
 )
 
 async def main():
-    result = await agent.run('Show me all the tasks')
+    result = await agent.run('Show me the tools')
     print(result.output)
 
 if __name__ == '__main__':
