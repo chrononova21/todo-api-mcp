@@ -1,7 +1,9 @@
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
-from fastapi_mcp import FastApiMCP
+#from fastapi_mcp import FastApiMCP
+from fastmcp import FastMCP
+from fastmcp.server.openapi import RouteMap, MCPType
 from src.models import db_init
 from src.schema import Task
 from src.service import (
@@ -66,5 +68,37 @@ async def delete_task_by_id_api(task_id: str):
     response = await delete_task_by_id(task_id=task_id)
     return response
 
-mcp_app = FastApiMCP(app)
-mcp_app.mount_http()
+# mcp_app = FastApiMCP(app)
+# mcp_app.mount_http()
+
+mcp = FastMCP.from_fastapi(
+    app=app,
+    route_maps=[
+        RouteMap(
+            methods=["GET"],
+            pattern=r".*\{.*\}.*",
+            mcp_type=MCPType.RESOURCE_TEMPLATE
+        ),
+        RouteMap(
+            methods=["GET"],
+            pattern=r".*",
+            mcp_type=MCPType.RESOURCE
+        ),
+    ],
+)
+mcp_app = mcp.http_app(path='/mcp')
+
+@asynccontextmanager
+async def combined_lifespan(app: FastAPI):
+    async with lifespan(app):
+        async with mcp_app.lifespan(app):
+            yield
+
+combined_app = FastAPI(
+    title="todo MCP Server",
+    routes=[
+        *mcp_app.routes,
+        *app.routes,
+    ],
+    lifespan=combined_lifespan,
+)

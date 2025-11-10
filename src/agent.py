@@ -36,7 +36,7 @@ agent = Agent(
 )
 
 async def main():
-    result = await agent.run('Show me the tools')
+    result = await agent.run('Show me all the tasks')
     print(result.output)
 
 if __name__ == '__main__':
